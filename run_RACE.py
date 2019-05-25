@@ -81,7 +81,7 @@ def train(epoch_num, n_gpu, train_dataloader, dev_dataloader, model, optimizer, 
                 optimizer.zero_grad()
                 global_step += 1
 
-            if global_step % print_step == 0:
+            if global_step != 0 and global_step % print_step == 0:
                 train_loss = epoch_loss / train_steps
 
                 train_acc, train_report = classifiction_metric(

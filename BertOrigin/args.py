@@ -60,7 +60,7 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
 
     # 训练参数
     parser.add_argument("--train_batch_size",
-                        default=16,
+                        default=32,
                         type=int,
                         help="Total batch size for training.")
 
@@ -100,7 +100,7 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
 
     parser.add_argument('--print_step',
                         type=int,
-                        default=200,
+                        default=400,
                         help="多少步进行模型保存以及日志信息写入")
 
 
