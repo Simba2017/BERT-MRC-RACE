@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import argparse
 
 
@@ -44,6 +46,15 @@ def get_args(data_dir, cache_dir, embedding_folder, model_dir, log_dir):
 
     # 模型参数
     parser.add_argument("--output_dim", default=4, type=int)
+
+    # LSTM 参数
+    parser.add_argument("--hidden_size", default=200, type=int, help="隐层特征维度")
+    parser.add_argument('--rnn_num_layers', default=2, type=int, help='RNN层数')
+    parser.add_argument("--bidirectional", default=True, type=bool)
+
+
+    # GAReader
+    parser.add_argument('--ga_layers', default=2, type=int, help='GAReader 的层数')
 
 
     # word Embedding

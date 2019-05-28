@@ -16,5 +16,8 @@ class Linear(nn.Module):
         nn.init.constant_(self.linear.bias, 0)
 
     def forward(self, x):
+
+        # x: [batch_size, seq_len, in_features]
         x = self.linear(x)
+        # x: [batch_size, seq_len, out_features]
         return x
