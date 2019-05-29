@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-from Models.LSTM import LSTM
+from Models.UnOrderedLSTM import LSTM
 from Models.Linear import Linear
 
 
@@ -28,7 +28,7 @@ def gated_attention(article, question):
     # 一行表示对于article中一个单词, 所有question中单词与该单词的相似度或相关度
     # 一列表示对于question 中的一个单词,所有 article 中单词与该单词的相似度或相关度
 
-    att_weights = F.softmax(att_matrix.view(-1, inter.size(-1))).view_as(att_matrix)
+    att_weights = F.softmax(att_matrix.view(-1, att_matrix.size(-1))).view_as(att_matrix)
     # att_weights: [batch_size, article_len, question_len]
 
     question_rep = torch.bmm(att_weights, question)
@@ -38,7 +38,7 @@ def gated_attention(article, question):
     # question_to_article: [batch_size, article_len, dim]
 
     return question_to_article
-    
+
 
 
 class GAReader(nn.Module):
@@ -55,10 +55,10 @@ class GAReader(nn.Module):
 
         self.word_embedding = nn.Embedding.from_pretrained(word_emb, freeze=False)
 
-        self.rnn = LSTM(embedding_dim, hidden_size,
+        self.rnn = LSTM(embedding_dim, hidden_size, False,
                         rnn_num_layers, bidirectional, dropout)
 
-        self.ga_rnn = LSTM(hidden_size, hidden_size,
+        self.ga_rnn = LSTM(hidden_size, hidden_size, False,
                            rnn_num_layers, bidirectional, dropout)
         
         self.ga_layers = ga_layers
@@ -69,6 +69,7 @@ class GAReader(nn.Module):
 
         article, article_lengths = batch.article
         # article: [article_len, batch_size], article_lengths: [batch_size]
+
         question, question_lengths = batch.question
         # question: [question_len, batch_size], question_lengths: [batch_size]
 
@@ -90,24 +91,26 @@ class GAReader(nn.Module):
         option3_emb = self.dropout(self.word_embedding(option3))
         # option: [option_len, batch_size, emd_dim]
 
-        _, question_out = self.rnn(question_emb, question_lengths)
+        article_emb = article_emb.permute(1, 0, 2)  # [batch_size, seq_len, dim]
+        question_emb = question_emb.permute(1, 0, 2)
+        option0_emb = option0_emb.permute(1, 0, 2)
+        option1_emb = option1_emb.permute(1, 0, 2)
+        option2_emb = option2_emb.permute(1, 0, 2)
+        option3_emb = option3_emb.permute(1, 0, 2)
+
+        question_hidden, question_out = self.rnn(question_emb, question_lengths)
         # question_out: [question_len, batch_size, hidden_size]
 
-        _, option0_out = self.rnn(option0_emb, option0_lengths)
-        _, option1_out = self.rnn(option1_emb, option1_lengths)
-        _, option2_out = self.rnn(option2_emb, option2_lengths)
-        _, option3_out = self.rnn(option3_emb, option3_lengths)
+        option0_hidden, option0_out = self.rnn(option0_emb, option0_lengths)
+        option1_hidden, option1_out = self.rnn(option1_emb, option1_lengths)
+        option2_hidden, option2_out = self.rnn(option2_emb, option2_lengths)
+        option3_hidden, option3_out = self.rnn(option3_emb, option3_lengths)
         # option_out: [option_len, batch_size, hidden_size]
 
         _, article_out = self.rnn(article_emb, article_lengths)
         # article_out: [article_len, batch_size, hidden_size]
 
-        article_out.permute(1, 0, 2)
-        question_out.permute(1, 0, 2)
-        option0_out.permute(1, 0, 2)
-        option1_out.permute(1, 0, 2)
-        option2_out.permute(1, 0, 2)
-        option3_out.permute(1, 0, 2)
+
 
         for layer in range(self.ga_layers):
                         
@@ -116,6 +119,8 @@ class GAReader(nn.Module):
 
             _, article_out = self.ga_rnn(article_emb, article_lengths)
             # article_out: [batch_size, article_len, hidden_size]
+        
+
         
         
 

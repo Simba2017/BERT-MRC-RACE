@@ -157,7 +157,7 @@ def main(config, model_filename):
 if __name__ == "__main__":
 
     model_name = "GAReader"
-    data_dir = "/home/songyingxin/datasets/RACE/all"
+    data_dir = "/home/songyingxin/datasets/RACE/demo"
     cache_dir = data_dir + "/cache/"
     embedding_folder = "/home/songyingxin/datasets/WordEmbedding/glove/"
 

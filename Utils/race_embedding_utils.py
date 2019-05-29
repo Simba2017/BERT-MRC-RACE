@@ -34,7 +34,7 @@ def load_race(path, id_field, word_field, label_field, batch_size, device, word_
     label_field.build_vocab(train, dev, test)
     
     train_iter, dev_iter, test_iter = data.BucketIterator.splits(
-        (train, dev, test), batch_sizes=(batch_size, len(dev), len(test)), sort_key=lambda x: len(x.article), sort_within_batch=True, repeat=False, shuffle=True, device=device
+        (train, dev, test), batch_sizes=(batch_size, len(dev), len(test)), sort_key=lambda x: len(x.article), device=device
     )
 
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
                             include_lengths=True, fix_length=30)
     label_field = data.LabelField(dtype=torch.long)
     
-    path = "/home/songyingxin/datasets/RACE/all"
+    path = "/home/songyingxin/datasets/RACE/demo"
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
