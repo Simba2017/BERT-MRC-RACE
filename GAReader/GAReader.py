@@ -6,7 +6,7 @@ import torch
 
 from Models.UnOrderedLSTM import LSTM
 from Models.Linear import Linear
-
+from Models.MLPAttention import MLPAttention
 
 def gated_attention(article, question):
     """
@@ -28,7 +28,7 @@ def gated_attention(article, question):
     # 一行表示对于article中一个单词, 所有question中单词与该单词的相似度或相关度
     # 一列表示对于question 中的一个单词,所有 article 中单词与该单词的相似度或相关度
 
-    att_weights = F.softmax(att_matrix.view(-1, att_matrix.size(-1))).view_as(att_matrix)
+    att_weights = F.softmax(att_matrix.view(-1, att_matrix.size(-1)), dim=1).view_as(att_matrix)
     # att_weights: [batch_size, article_len, question_len]
 
     question_rep = torch.bmm(att_weights, question)
@@ -55,13 +55,19 @@ class GAReader(nn.Module):
 
         self.word_embedding = nn.Embedding.from_pretrained(word_emb, freeze=False)
 
-        self.rnn = LSTM(embedding_dim, hidden_size, False,
+        self.rnn = LSTM(embedding_dim, hidden_size, True,
                         rnn_num_layers, bidirectional, dropout)
 
-        self.ga_rnn = LSTM(hidden_size, hidden_size, False,
+        self.ga_rnn = LSTM(hidden_size * 2, hidden_size, True,
                            rnn_num_layers, bidirectional, dropout)
         
         self.ga_layers = ga_layers
+
+        self.mlp_att = MLPAttention(hidden_size * 2, dropout)
+
+        self.dot_layer = MLPAttention(hidden_size * 2, dropout)
+
+        self.final_liear = Linear(hidden_size * 8, output_dim)
 
         self.dropout = nn.Dropout(dropout)
     
@@ -99,27 +105,52 @@ class GAReader(nn.Module):
         option3_emb = option3_emb.permute(1, 0, 2)
 
         question_hidden, question_out = self.rnn(question_emb, question_lengths)
-        # question_out: [question_len, batch_size, hidden_size]
+        # question_out: [batch_size, question_len, hidden_size * 2]
+        # question_hidden: [batch_size, hidden_size * 2]
 
         option0_hidden, option0_out = self.rnn(option0_emb, option0_lengths)
         option1_hidden, option1_out = self.rnn(option1_emb, option1_lengths)
         option2_hidden, option2_out = self.rnn(option2_emb, option2_lengths)
         option3_hidden, option3_out = self.rnn(option3_emb, option3_lengths)
-        # option_out: [option_len, batch_size, hidden_size]
+        # option_out: [batch_size, option_len,  hidden_size * 2]
 
         _, article_out = self.rnn(article_emb, article_lengths)
-        # article_out: [article_len, batch_size, hidden_size]
-
+        # article_out: [article_len, batch_size, hidden_size * 2]
 
 
         for layer in range(self.ga_layers):
                         
             article_emb = self.dropout(gated_attention(article_out, question_out))
-            # article_emb: [batch_size, article_len, hidden_size]
+            # article_emb: [batch_size, article_len, hidden_size * 2]
 
             _, article_out = self.ga_rnn(article_emb, article_lengths)
-            # article_out: [batch_size, article_len, hidden_size]
+            # article_out: [batch_size, article_len, hidden_size * 2]
         
+        ATT_article_question = self.dropout(self.mlp_att(question_hidden, article_out, article_out))
+        # ATT_article_question: [batch_size, hidden_size * 2]
+        
+        # 融合 option 信息 [batch_size, hidden_size * 2]
+        ATT_option0 = self.dropout(self.dot_layer(
+            ATT_article_question, option0_out, option0_out))
+        ATT_option1 = self.dropout(self.dot_layer(
+            ATT_article_question, option1_out, option1_out))
+        ATT_option2 = self.dropout(self.dot_layer(
+            ATT_article_question, option2_out, option2_out))
+        ATT_option3 = self.dropout(self.dot_layer(
+            ATT_article_question, option3_out, option3_out))
+        
+        all_infomation = torch.cat((ATT_option0, ATT_option1, ATT_option2, ATT_option3), dim=1)
+
+        logit = self.dropout(self.final_liear(all_infomation))
+
+        return logit
+
+
+        
+
+
+
+
 
         
         

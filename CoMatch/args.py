@@ -7,7 +7,7 @@ def get_args(data_dir, cache_dir, embedding_folder, model_dir, log_dir):
 
     parser = argparse.ArgumentParser(description='RACE')
 
-    parser.add_argument("--model_name", default="GAReader",
+    parser.add_argument("--model_name", default="CoMatch",
                         type=str, help="这批参数所属的模型的名字")
 
     parser.add_argument("--seed", default=1234, type=int, help="随机种子")
@@ -38,30 +38,30 @@ def get_args(data_dir, cache_dir, embedding_folder, model_dir, log_dir):
 
     parser.add_argument("--print_step", default=200,
                         type=int, help="多少步存储一次模型")
-    
+
     # 模型参数
     parser.add_argument("--output_dim", default=4, type=int)
-                        
+
     # 优化参数
     parser.add_argument("--train_batch_size", default=32, type=int)
     parser.add_argument("--dev_batch_size", default=32, type=int)
     parser.add_argument("--test_batch_size", default=32, type=int)
 
-    parser.add_argument("--epoch_num", default=30, type=int)
+    parser.add_argument("--epoch_num", default=5, type=int)
     parser.add_argument("--dropout", default=0.5, type=float)
 
-    parser.add_argument("--lr", default=0.1, type=float, help="学习率")
+    parser.add_argument("--lr", default=0.001, type=float, help="学习率")
 
     parser.add_argument("--clip", default=10, type=int, help="梯度裁剪")
 
     # LSTM 参数
-    parser.add_argument("--hidden_size", default=128, type=int, help="隐层特征维度")
-    parser.add_argument('--rnn_num_layers', default=1, type=int, help='RNN层数')  
+    parser.add_argument("--hidden_size", default=256, type=int, help="隐层特征维度")
+    parser.add_argument('--rnn_num_layers', default=1, type=int, help='RNN层数')
     parser.add_argument("--bidirectional", default=True, type=bool)
 
     # GAReader
-    parser.add_argument('--ga_layers', default=1, type=int, help='GAReader 的层数')
-
+    parser.add_argument('--ga_layers', default=1,
+                        type=int, help='GAReader 的层数')
 
     # word Embedding
     parser.add_argument(

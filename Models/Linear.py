@@ -12,8 +12,8 @@ class Linear(nn.Module):
         self.init_params()
 
     def init_params(self):
-        nn.init.kaiming_normal_(self.linear.weight)
-        nn.init.constant_(self.linear.bias, 0)
+        nn.init.kaiming_normal_(self.linear.weight.data)
+        nn.init.constant_(self.linear.bias.data, 0)
 
     def forward(self, x):
 

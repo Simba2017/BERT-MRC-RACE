@@ -6,7 +6,7 @@ from torchtext import datasets
 from torchtext import vocab
 
 
-def load_race(path, id_field, word_field, label_field, batch_size, device, word_embed_file, cache_dir):
+def load_race(path, id_field, word_field, label_field, train_batch_size, dev_batch_size, test_batch_size, device, word_embed_file, cache_dir):
 
     fields = {
         'race_id': ('race_id', id_field),
@@ -28,16 +28,13 @@ def load_race(path, id_field, word_field, label_field, batch_size, device, word_
     print("the size of train: {}, dev:{}, test:{}".format(
         len(train.examples), len(dev.examples), len(test.examples)))
     
-    word_field.build_vocab(train, dev, test, max_size=25000,
+    word_field.build_vocab(train, dev, test, max_size=50000,
                            vectors=word_vectors, unk_init=torch.Tensor.normal_)
     
     label_field.build_vocab(train, dev, test)
     
     train_iter, dev_iter, test_iter = data.BucketIterator.splits(
-        (train, dev, test), batch_sizes=(batch_size, len(dev), len(test)), sort_key=lambda x: len(x.article), device=device
-    )
-
-
+        (train, dev, test), batch_sizes=(train_batch_size, dev_batch_size, test_batch_size), sort_key=lambda x: len(x.article), device=device, shuffle=True)
 
     return train_iter, dev_iter, test_iter
 

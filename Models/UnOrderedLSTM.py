@@ -33,19 +33,21 @@ class LSTM(nn.Module):
                 getattr(self.rnn, f'bias_hh_l{i}_reverse').chunk(4)[1].fill_(1)
 
     def forward(self, x, x_len):
-
+        # x: [batch_size, seq_len, dim], x_len:[batch_size]
         x_len_sorted, x_idx = torch.sort(x_len, descending=True)
         x_sorted = torch.index_select(x, dim=0, index=x_idx)
         sorted_x, x_ori_idx = torch.sort(x_idx)
 
         x_packed = nn.utils.rnn.pack_padded_sequence(
             x_sorted, x_len_sorted, batch_first=True)
-        x_packed, (h, c) = self.rnn(x_packed)
+        x_packed, (hidden, c) = self.rnn(x_packed)
 
         x = nn.utils.rnn.pad_packed_sequence(x_packed, batch_first=True)[0]
         x = x.index_select(dim=0, index=x_ori_idx)
-        h = h.permute(1, 0, 2).contiguous().view(-1,
-                                                 h.size(0) * h.size(2)).squeeze()
-        h = h.index_select(dim=0, index=x_ori_idx)
 
-        return h, x
+        hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
+        # hidden = hidden.permute(1, 0, 2).contiguous().view(-1,
+        #                                          hidden.size(0) * hidden.size(2)).squeeze()
+        hidden = hidden.index_select(dim=0, index=x_ori_idx)
+
+        return hidden, x

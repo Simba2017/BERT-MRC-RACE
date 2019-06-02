@@ -4,15 +4,15 @@ from torch.utils.data import (DataLoader, RandomSampler, TensorDataset)
 
 
 class RaceExample(object):
-    """A single training/test example for the RACE dataset."""
-    '''
-    For RACE dataset:
-    race_id: data id
-    context_sentence: article
-    start_ending: question
-    ending_0/1/2/3: option_0/1/2/3
-    label: true answer
-    '''
+    """ RACE 数据集的样本格式
+    Args:
+        race_id: data id
+        context_sentence: article
+        start_ending: question
+        ending_0/1/2/3: option_0/1/2/3
+        label: true answer
+    """
+
 
     def __init__(self,
                  race_id,
@@ -55,6 +55,12 @@ class RaceExample(object):
 
 
 class InputFeatures(object):
+    """ RACE 数据集输入特征 
+    Args:
+        example_id: 样本id
+        choice_features: 特征 ['input_ids', 'input_mask', 'segment_ids']
+        label: 标签
+    """
     def __init__(self,
                  example_id,
                  choices_features,
@@ -74,43 +80,32 @@ class InputFeatures(object):
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length):
-    """Loads a data file into a list of `InputBatch`s."""
+    """Loads a data file into a list of `InputBatch`s.
+    Args:
+        examples: RACEExamples 类型
+        tokenizer: 分词器
+        max_seq_length: 句子最大长度
+    """
 
-    # RACE is a multiple choice task. To perform this task using Bert,
-    # we will use the formatting proposed in "Improving Language
-    # Understanding by Generative Pre-Training" and suggested by
-    # @jacobdevlin-google in this issue
-    # https://github.com/google-research/bert/issues/38.
-    #
-    # The input will be like:
-    # [CLS] Article [SEP] Question + Option [SEP]
-    # for each option
-    #
-    # The model will output a single value for each input. To get the
-    # final decision of the model, we will run a softmax over these 4
-    # outputs.
     features = []
     for example_index, example in enumerate(examples):
-        context_tokens = tokenizer.tokenize(example.context_sentence)
-        start_ending_tokens = tokenizer.tokenize(example.start_ending)
+        context_tokens = tokenizer.tokenize(example.context_sentence) # article
+        start_ending_tokens = tokenizer.tokenize(example.start_ending) # question
 
         choices_features = []
         for ending_index, ending in enumerate(example.endings):
-            # We create a copy of the context tokens in order to be
-            # able to shrink it according to ending_tokens
+
             context_tokens_choice = context_tokens[:]
-            ending_tokens = start_ending_tokens + tokenizer.tokenize(ending)
-            # Modifies `context_tokens_choice` and `ending_tokens` in
-            # place so that the total length is less than the
-            # specified length.  Account for [CLS], [SEP], [SEP] with
-            # "- 3"
+            ending_tokens = start_ending_tokens + tokenizer.tokenize(ending) # question + option
+
+            # "- 3" 指的是输入中包含 [CLS], [SEP], [SEP]: [CLS] Article [SEP] Question + Option [SEP]
             _truncate_seq_pair(context_tokens_choice,
                                ending_tokens, max_seq_length - 3)
-
             tokens = ["[CLS]"] + context_tokens_choice + \
                 ["[SEP]"] + ending_tokens + ["[SEP]"]
+
             segment_ids = [0] * (len(context_tokens_choice) + 2) + \
-                [1] * (len(ending_tokens) + 1)
+                [1] * (len(ending_tokens) + 1) # article 为 0 ， question + option 为1
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
             input_mask = [1] * len(input_ids)
@@ -144,10 +139,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length):
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
 
-    # This is a simple heuristic which will always truncate the longer sequence
-    # one token at a time. This makes more sense than truncating an equal percent
-    # of tokens from each, since if one sequence is very short then each token
-    # that's truncated likely contains more information than a longer sequence.
     while True:
         total_length = len(tokens_a) + len(tokens_b)
         if total_length <= max_length:
