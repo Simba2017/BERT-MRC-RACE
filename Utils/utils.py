@@ -19,8 +19,9 @@ def word_tokenize(sent):
     return [token.text for token in doc]
 
 
-def get_device():
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def get_device(gpu_id):
+    device = torch.device("cuda:" + str(gpu_id)
+                          if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count()
     if torch.cuda.is_available():
         print("device is cuda, # cuda is: ", n_gpu)

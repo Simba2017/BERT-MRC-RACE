@@ -50,7 +50,7 @@ def get_args(data_dir, cache_dir, embedding_folder, model_dir, log_dir):
     parser.add_argument("--epoch_num", default=30, type=int)
     parser.add_argument("--dropout", default=0.5, type=float)
 
-    parser.add_argument("--lr", default=0.1, type=float, help="学习率")
+    parser.add_argument("--lr", default=0.001, type=float, help="学习率")
 
     parser.add_argument("--clip", default=10, type=int, help="梯度裁剪")
 
@@ -62,7 +62,8 @@ def get_args(data_dir, cache_dir, embedding_folder, model_dir, log_dir):
     # GAReader
     parser.add_argument('--ga_layers', default=1, type=int, help='GAReader 的层数')
 
-
+    parser.add_argument("--gpu_ids", type=str, default="0", help="gpu 的设备id")
+    
     # word Embedding
     parser.add_argument(
         '--glove_word_file',

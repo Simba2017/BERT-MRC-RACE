@@ -86,7 +86,7 @@ def train(epoch_num, model, train_dataloader, dev_dataloader, optimizer, criteri
                     writer.add_scalar(label + ":" + "f1/dev",
                                       dev_report[label]['f1-score'], c)
 
-                print_list = ['micro avg', 'macro avg', 'weighted avg']
+                print_list = ['macro avg', 'weighted avg']
                 for label in print_list:
                     writer.add_scalar(label + ":" + "f1/train",
                                       train_report[label]['f1-score'], c)
@@ -147,7 +147,11 @@ def main(config, model_filename):
     model_file = os.path.join(
         config.output_dir, model_filename)
 
-    device, n_gpu = get_device()
+    # 设备准备
+    gpu_ids = [int(device_id) for device_id in config.gpu_ids.split()]
+    device, n_gpu = get_device(gpu_ids[0])
+    if n_gpu > 1:
+        n_gpu = len(gpu_ids)
 
     # 设定随机种子
     random.seed(config.seed)
@@ -178,6 +182,7 @@ def main(config, model_filename):
             config.rnn_num_layers, config.ga_layers, config.bidirectional,
             config.dropout, word_emb)
     
+    # optimizer = optim.Adam(model.parameters(), lr=config.lr)
     optimizer = optim.SGD(model.parameters(), lr=config.lr)
     criterion = nn.CrossEntropyLoss()
 
@@ -192,23 +197,22 @@ def main(config, model_filename):
     test_loss, test_acc, test_report = evaluate(
         model, test_iterator, criterion, ['0', '1', '2', '3'])
     print("-------------- Test -------------")
-    print("\t Loss: {} | Acc: {} | Micro avg F1: {} | Macro avg F1: {} | Weighted avg F1: {}".format(
-        test_loss, test_acc, test_report['micro avg']['f1-score'],
-        test_report['macro avg']['f1-score'], test_report['weighted avg']['f1-score']))
+    print("\t Loss: {} | Acc: {} | Macro avg F1: {} | Weighted avg F1: {}".format(
+        test_loss, test_acc, test_report['macro avg']['f1-score'], test_report['weighted avg']['f1-score']))
 
 
 if __name__ == "__main__":
 
     model_name = "GAReader"
-    data_dir = "/home/songyingxin/datasets/RACE/all/large"
+    data_dir = "/search/hadoop02/suanfa/songyingxin/data/RACE/all"
     # data_dir = "/home/songyingxin/datasets/RACE/demo"
-    cache_dir = data_dir + "/cache/"
-    embedding_folder = "/home/songyingxin/datasets/WordEmbedding/glove/"
+    cache_dir = ".cache/"
+    embedding_folder = "/search/hadoop02/suanfa/songyingxin/data/embedding/glove/"
 
-    output_dir = ".models/"
-    log_dir = ".log/"
+    output_dir = ".old_models/"
+    log_dir = ".old_log/"
 
-    model_filename = "model_large_1.pt"
+    model_filename = "model_adam1.pt"
 
     if model_name == "GAReader":
         from GAReader import args, GAReader

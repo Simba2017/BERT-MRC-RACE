@@ -6,7 +6,6 @@ from tqdm import tqdm, trange
 import csv
 import glob
 import json
-import apex
 
 from tensorboardX import SummaryWriter
 import time
@@ -19,9 +18,9 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from torch.utils.data.distributed import DistributedSampler
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from pytorch_pretrained_bert.modeling import BertForMultipleChoice
 from pytorch_pretrained_bert.optimization import BertAdam
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
+from pytorch_pretrained_bert.modeling import BertConfig, BertForMultipleChoice
 
 from BertOrigin import args
 from Utils.utils import get_device, classifiction_metric
@@ -103,7 +102,7 @@ def train(epoch_num, n_gpu, train_dataloader, dev_dataloader, model, optimizer, 
                     writer.add_scalar(label + ":" + "f1/dev",
                                       dev_report[label]['f1-score'], c)
 
-                print_list = ['micro avg', 'macro avg', 'weighted avg']
+                print_list = ['macro avg', 'weighted avg']
                 for label in print_list:
                     writer.add_scalar(label + ":" + "f1/train",
                                       train_report[label]['f1-score'], c)
@@ -150,7 +149,7 @@ def evaluate(model, dataloader, criterion, device, label_list):
     return epoch_loss/len(dataloader), acc, report
         
 
-def main(config):
+def main(config, bert_vocab_file, bert_model_dir):
 
     if not os.path.exists(config.output_dir):
         os.makedirs(config.output_dir)
@@ -161,7 +160,11 @@ def main(config):
     output_model_file = os.path.join(config.output_dir, config.weights_name)  # 模型输出文件
     output_config_file = os.path.join(config.output_dir, config.config_name)
 
-    device, n_gpu = get_device()
+    # 设备准备
+    gpu_ids = [int(device_id) for device_id in config.gpu_ids.split()]
+    device, n_gpu = get_device(gpu_ids[0])
+    if n_gpu > 1:
+        n_gpu = len(gpu_ids)
 
     config.train_batch_size = config.train_batch_size // config.gradient_accumulation_steps
 
@@ -173,7 +176,7 @@ def main(config):
         torch.cuda.manual_seed_all(config.seed)
     
     tokenizer = BertTokenizer.from_pretrained(
-        "/home/songyingxin/datasets/pytorch-bert/vocabs/bert-base-uncased-vocab.txt", do_lower_case=config.do_lower_case)
+        bert_vocab_file, do_lower_case=config.do_lower_case)
     label_list = ["0", "1", "2", "3"]
     if config.do_train:
         
@@ -190,10 +193,12 @@ def main(config):
         
         # 模型准备
         model = BertForMultipleChoice.from_pretrained(
-            "/home/songyingxin/datasets/pytorch-bert/bert-base-uncased",
+            bert_model_dir,
             cache_dir=config.cache_dir, num_choices=4)
 
         model.to(device)
+        if n_gpu > 1:
+            model = torch.nn.DataParallel(model,device_ids=gpu_ids)
 
         # 优化器准备
         param_optimizer = list(model.named_parameters())
@@ -223,7 +228,7 @@ def main(config):
         test_file, tokenizer, config.max_seq_length, config.test_batch_size)
     
     bert_config = BertConfig(output_config_file)
-    model = BertForSequenceClassification(bert_config, num_labels=len(label_list))
+    model = BertForMultipleChoice(bert_config, num_choices=len(label_list))
     model.load_state_dict(torch.load(output_model_file))
     model.to(device)
 
@@ -240,7 +245,7 @@ def main(config):
     for label in label_list:
         print('\t {}: Precision: {} | recall: {} | f1 score: {}'.format(
             label, test_report[label]['precision'], test_report[label]['recall'], test_report[label]['f1-score']))
-    print_list = ['micro avg', 'macro avg', 'weighted avg']
+    print_list = ['macro avg', 'weighted avg']
 
     for label in print_list:
         print('\t {}: Precision: {} | recall: {} | f1 score: {}'.format(
@@ -249,8 +254,16 @@ def main(config):
 
 
 if __name__ == "__main__":
-    data_dir = "/home/songyingxin/datasets/RACE/all"
-    output_dir = ".output"
-    cache_dir = ".cache"
-    log_dir = ".log"
-    main(args.get_args(data_dir, output_dir, cache_dir, log_dir))
+    data_dir = "/search/hadoop02/suanfa/songyingxin/data/RACE/all"
+    output_dir = ".bertoutput"
+    cache_dir = ".bertcache"
+    log_dir = ".bertlog"
+
+    # bert-base
+    bert_vocab_file = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-base-uncased-vocab.txt"
+    bert_model_dir = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-base-uncased"
+
+    # bert_vocab_file = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-large-uncased-vocab.txt"
+    # bert_model_dir = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-large-uncased"
+
+    main(args.get_args(data_dir, output_dir, cache_dir, log_dir), bert_vocab_file, bert_model_dir)

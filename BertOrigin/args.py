@@ -79,7 +79,7 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
 
     parser.add_argument("--num_train_epochs",
-                        default=1.0,
+                        default=3.0,
                         type=float,
                         help="Total number of training epochs to perform.")
     parser.add_argument("--warmup_proportion",
@@ -114,7 +114,8 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
                              "0 (default value): dynamic loss scaling.\n"
                              "Positive power of 2: static loss scaling value.\n")
-                         
+                                  
+    parser.add_argument("--gpu_ids", type=str, default="0", help="gpu 的设备id")
     config = parser.parse_args()
 
     return config
