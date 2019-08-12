@@ -62,11 +62,11 @@ def train(epoch_num, n_gpu, train_dataloader, dev_dataloader, model, optimizer, 
                 loss = loss.mean()
             if gradient_accumulation_steps > 1:
                 loss = loss / gradient_accumulation_steps
-            
+
             train_steps += 1
             # 反向传播
             loss.backward()
-            
+
             epoch_loss += loss.item()
 
             preds = logits.detach().cpu().numpy()
@@ -88,7 +88,7 @@ def train(epoch_num, n_gpu, train_dataloader, dev_dataloader, model, optimizer, 
 
                 dev_loss, dev_acc, dev_report = evaluate(
                     model, dev_dataloader, criterion, device, label_list)
-                
+
                 c = global_step // print_step
                 writer.add_scalar("loss/train", train_loss, c)
                 writer.add_scalar("loss/dev", dev_loss, c)
@@ -117,8 +117,9 @@ def train(epoch_num, n_gpu, train_dataloader, dev_dataloader, model, optimizer, 
                     torch.save(model_to_save.state_dict(), output_model_file)
                     with open(output_config_file, 'w') as f:
                         f.write(model_to_save.config.to_json_string())
-                
+
     writer.close()
+
 
 def evaluate(model, dataloader, criterion, device, label_list):
 
@@ -144,10 +145,10 @@ def evaluate(model, dataloader, criterion, device, label_list):
         all_labels = np.append(all_labels, label_ids)
 
         epoch_loss += loss.mean().item()
-    
+
     acc, report = classifiction_metric(all_preds, all_labels, label_list)
     return epoch_loss/len(dataloader), acc, report
-        
+
 
 def main(config, bert_vocab_file, bert_model_dir):
 
@@ -157,7 +158,8 @@ def main(config, bert_vocab_file, bert_model_dir):
     if not os.path.exists(config.cache_dir):
         os.makedirs(config.cache_dir)
 
-    output_model_file = os.path.join(config.output_dir, config.weights_name)  # 模型输出文件
+    output_model_file = os.path.join(
+        config.output_dir, config.weights_name)  # 模型输出文件
     output_config_file = os.path.join(config.output_dir, config.config_name)
 
     # 设备准备
@@ -174,23 +176,25 @@ def main(config, bert_vocab_file, bert_model_dir):
     torch.manual_seed(config.seed)
     if n_gpu > 0:
         torch.cuda.manual_seed_all(config.seed)
-    
+
     tokenizer = BertTokenizer.from_pretrained(
         bert_vocab_file, do_lower_case=config.do_lower_case)
     label_list = ["0", "1", "2", "3"]
     if config.do_train:
-        
+
         # 数据准备
         train_file = os.path.join(config.data_dir, "train.json")
         dev_file = os.path.join(config.data_dir, "dev.json")
 
-        train_dataloader, train_len = load_data(train_file, tokenizer, config.max_seq_length, config.train_batch_size)
+        train_dataloader, train_len = load_data(
+            train_file, tokenizer, config.max_seq_length, config.train_batch_size)
 
-        dev_dataloader, dev_len = load_data(dev_file, tokenizer, config.max_seq_length, config.dev_batch_size)
+        dev_dataloader, dev_len = load_data(
+            dev_file, tokenizer, config.max_seq_length, config.dev_batch_size)
 
         num_train_steps = int(
             train_len / config.train_batch_size / config.gradient_accumulation_steps * config.num_train_epochs)
-        
+
         # 模型准备
         if config.model_name == "BertOrigin":
             from BertOrigin.BertOrigin import BertOrigin
@@ -200,7 +204,7 @@ def main(config, bert_vocab_file, bert_model_dir):
 
         model.to(device)
         if n_gpu > 1:
-            model = torch.nn.DataParallel(model,device_ids=gpu_ids)
+            model = torch.nn.DataParallel(model, device_ids=gpu_ids)
 
         # 优化器准备
         param_optimizer = list(model.named_parameters())
@@ -215,8 +219,8 @@ def main(config, bert_vocab_file, bert_model_dir):
         ]
 
         optimizer = BertAdam(optimizer_grouped_parameters,
-                            lr=config.learning_rate,
-                            warmup=config.warmup_proportion,
+                             lr=config.learning_rate,
+                             warmup=config.warmup_proportion,
                              t_total=num_train_steps)
 
         criterion = nn.CrossEntropyLoss()
@@ -228,7 +232,7 @@ def main(config, bert_vocab_file, bert_model_dir):
     test_file = os.path.join(config.data_dir, "test.json")
     test_dataloader, _ = load_data(
         test_file, tokenizer, config.max_seq_length, config.test_batch_size)
-    
+
     bert_config = BertConfig(output_config_file)
     if config.model_name == "BertOrigin":
         from BertOrigin.BertOrigin import BertOrigin
@@ -254,16 +258,15 @@ def main(config, bert_vocab_file, bert_model_dir):
     for label in print_list:
         print('\t {}: Precision: {} | recall: {} | f1 score: {}'.format(
             label, test_report[label]['precision'], test_report[label]['recall'], test_report[label]['f1-score']))
-    
 
 
 if __name__ == "__main__":
 
-    model_name = "BertOrigin"
-    data_dir = "/search/hadoop02/suanfa/songyingxin/data/RACE/all"
-    output_dir = ".bertoutput"
-    cache_dir = ".bertcache"
-    log_dir = ".bertlog"
+    model_name = "BertSegment"
+    data_dir = "/search/hadoop02/suanfa/songyingxin/data/RACE/all/segment/400"
+    output_dir = ".BertSegment_output"
+    cache_dir = ".BertSegment_cache"
+    log_dir = ".BertSegment_log"
 
     # bert-base
     bert_vocab_file = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-base-uncased-vocab.txt"
@@ -271,6 +274,7 @@ if __name__ == "__main__":
 
     # bert_vocab_file = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-large-uncased-vocab.txt"
     # bert_model_dir = "/search/hadoop02/suanfa/songyingxin/pytorch_Bert/bert-large-uncased"
-    if model_name == "BertOrigin":
-        from BertOrigin import args
-        main(args.get_args(data_dir, output_dir, cache_dir, log_dir), bert_vocab_file, bert_model_dir)
+    if model_name == "BertSegment":
+        from BertSegment import args
+        main(args.get_args(data_dir, output_dir, cache_dir,
+                           log_dir), bert_vocab_file, bert_model_dir)

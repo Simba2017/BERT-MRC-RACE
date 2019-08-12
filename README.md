@@ -11,13 +11,19 @@ RACE 排行榜:  http://www.qizhexie.com//data/RACE_leaderboard
 我认为 RACE 数据集能够更好的体现 NLP 阅读理解的极限。
 
 
+## 运行
+
+```
+
+```
+
 ## Results
 
-| 模型     | loss | acc  |
-| -------- | ---- | ---- |
-| GAReader |      |      |
-|          |      |      |
-|          |      |      |
+| 模型     | loss    | acc    |
+| -------- | ------- | ------ |
+| GAReader | 1.30194 | 38.852 |
+|          |         |        |
+|          |         |        |
 
 
 

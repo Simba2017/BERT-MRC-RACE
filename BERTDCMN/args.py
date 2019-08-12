@@ -5,8 +5,6 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
 
     parser = argparse.ArgumentParser(description='BERT Baseline')
 
-    parser.add_argument("--model_name", default="BertOrigin", type=str, help="模型的名字")
-
     # 文件路径：数据目录， 缓存目录
     parser.add_argument("--data_dir",
                         default=data_dir,
@@ -17,8 +15,8 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         default=output_dir,
                         type=str,
                         help="The output directory where the model predictions and checkpoints will be written.")
-    
-    parser.add_argument("--config_name", 
+
+    parser.add_argument("--config_name",
                         default="bert_config.json",
                         type=str)
     parser.add_argument("--weights_name",
@@ -95,7 +93,7 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         type=float,
                         help="Adam 的 学习率"
                         )
-    
+
     parser.add_argument("--do_train",
                         action='store_true',
                         help="Whether to run training.")
@@ -104,7 +102,6 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         type=int,
                         default=400,
                         help="多少步进行模型保存以及日志信息写入")
-
 
     # 解决gpu不足问题
     parser.add_argument('--fp16',
@@ -116,8 +113,13 @@ def get_args(data_dir, output_dir, cache_dir, log_dir):
                         help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
                              "0 (default value): dynamic loss scaling.\n"
                              "Positive power of 2: static loss scaling value.\n")
-                                  
+
     parser.add_argument("--gpu_ids", type=str, default="0", help="gpu 的设备id")
+
+    parser.add_argument("--article_length", type=int, default=400, help="article 对应的最大长度")
+    parser.add_argument("--question_length", type=int, default=35, help="question 对应的最大长度")
+    parser.add_argument("--option_length", type=int, default=30, help="option 对应的最大长度")
+
     config = parser.parse_args()
 
     return config

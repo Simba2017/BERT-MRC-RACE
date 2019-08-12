@@ -26,7 +26,8 @@ def train(epoch_num, model, train_dataloader, dev_dataloader, optimizer, criteri
 
     model.train()
     writer = SummaryWriter(
-        log_dir=log_dir + '/' + time.strftime('%H:%M:%S', time.gmtime()))
+        log_dir=log_dir + '/' + time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime(time.time())))
+
     
     global_step = 0
     best_dev_loss = float('inf')

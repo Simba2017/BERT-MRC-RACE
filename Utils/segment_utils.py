@@ -13,10 +13,11 @@ class RaceExample(object):
         label: true answer
     """
 
-
     def __init__(self,
                  race_id,
-                 context_sentence,
+                 context_sentence_1,
+                 context_sentence_2,
+                 context_sentence_3,
                  question,
                  ending_0,
                  ending_1,
@@ -24,7 +25,9 @@ class RaceExample(object):
                  ending_3,
                  label=None):
         self.race_id = race_id
-        self.context_sentence = context_sentence
+        self.context_sentence_1 = context_sentence_1
+        self.context_sentence_2 = context_sentence_2
+        self.context_sentence_3 = context_sentence_3
         self.question = question
         self.endings = [
             ending_0,
@@ -40,7 +43,9 @@ class RaceExample(object):
     def __repr__(self):
         l = [
             f"id: {self.race_id}",
-            f"article: {self.context_sentence}",
+            f"context_sentence_1: {self.context_sentence_1}",
+            f"context_sentence_2: {self.context_sentence_2}",
+            f"context_sentence_3: {self.context_sentence_3}",
             f"question: {self.question}",
             f"option_0: {self.endings[0]}",
             f"option_1: {self.endings[1]}",
@@ -61,20 +66,38 @@ class InputFeatures(object):
         choice_features: 特征 ['input_ids', 'input_mask', 'segment_ids']
         label: 标签
     """
+
     def __init__(self,
                  example_id,
-                 choices_features,
+                 segment_1_choices_features,
+                 segment_2_choices_features,
+                 segment_3_choices_features,
                  label
-
                  ):
         self.example_id = example_id
-        self.choices_features = [
+        self.segment_1_choices_features = [
             {
                 'input_ids': input_ids,
                 'input_mask': input_mask,
                 'segment_ids': segment_ids
             }
-            for _, input_ids, input_mask, segment_ids in choices_features
+            for _, input_ids, input_mask, segment_ids in segment_1_choices_features
+        ]
+        self.segment_2_choices_features = [
+            {
+                'input_ids': input_ids,
+                'input_mask': input_mask,
+                'segment_ids': segment_ids
+            }
+            for _, input_ids, input_mask, segment_ids in segment_2_choices_features
+        ]
+        self.segment_3_choices_features = [
+            {
+                'input_ids': input_ids,
+                'input_mask': input_mask,
+                'segment_ids': segment_ids
+            }
+            for _, input_ids, input_mask, segment_ids in segment_3_choices_features
         ]
         self.label = label
 
@@ -87,7 +110,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length):
         max_seq_length: 句子最大长度
     Returns:
         features:{
-            example_id: 试题id
+            example_id: 试题 id
             choices_features :[
                 {article + question + option1}, ... , {article + question + option2}
             ]
@@ -97,23 +120,35 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length):
 
     features = []
     for example_index, example in enumerate(examples):
-        context_tokens = tokenizer.tokenize(example.context_sentence) # article
-        question_tokens = tokenizer.tokenize(example.question) # question
+        sentence_1_tokens = tokenizer.tokenize(
+            example.context_sentence_1) # 段落1
+        sentence_2_tokens = tokenizer.tokenize(
+            example.context_sentence_2)  # 段落2
+        sentence_3_tokens = tokenizer.tokenize(
+            example.context_sentence_3)  # 段落3
+
+        question_tokens = tokenizer.tokenize(
+            example.question)  # question
 
         choices_features = []
         for ending_index, ending in enumerate(example.endings):
 
-            context_tokens_choice = context_tokens[:]
-            ending_tokens = question_tokens + tokenizer.tokenize(ending) # question + option
+            sentence_1_tokens_choice = sentence_1_tokens[:]
+            sentence_2_tokens_choice = sentence_2_tokens[:]
+            sentence_3_tokens_choice = sentence_3_tokens[:]
+
+            ending_tokens = question_tokens + \
+                tokenizer.tokenize(ending)  # question + option
 
             # "- 3" 指的是输入中包含 [CLS], [SEP], [SEP]: [CLS] Article [SEP] Question + Option [SEP]
-            _truncate_seq_pair(context_tokens_choice,
+            _truncate_seq_pair(sentence_1_tokens_choice,
                                ending_tokens, max_seq_length - 3)
             tokens = ["[CLS]"] + context_tokens_choice + \
                 ["[SEP]"] + ending_tokens + ["[SEP]"]
 
             segment_ids = [0] * (len(context_tokens_choice) + 2) + \
-                [1] * (len(ending_tokens) + 1) # article 为 0 ， question + option 为1
+                [1] * (len(ending_tokens) +
+                       1)  # article 为 0 ， question + option 为1
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
             input_mask = [1] * len(input_ids)
@@ -166,6 +201,7 @@ def select_field(features, field):
         for feature in features
     ]
 
+
 def convert_features_to_tensors(features, batch_size):
     all_input_ids = torch.tensor(
         select_field(features, 'input_ids'), dtype=torch.long)
@@ -184,6 +220,7 @@ def convert_features_to_tensors(features, batch_size):
 
     return dataloader
 
+
 def read_race_examples(filename):
 
     examples = []
@@ -193,27 +230,27 @@ def read_race_examples(filename):
         for data in dataes:
             examples.append(
                 RaceExample(
-                    race_id = data['race_id'],
-                    context_sentence = data['article'],
-                    question = data['question'],
-                    ending_0 = data['option_0'],
-                    ending_1 = data['option_1'],
-                    ending_2 = data['option_2'],
-                    ending_3 = data['option_3'],
-                    label = data['label']
-                 )
+                    race_id=data['race_id'],
+                    context_sentence=data['articles'],
+                    question=data['question'],
+                    ending_0=data['option_0'],
+                    ending_1=data['option_1'],
+                    ending_2=data['option_2'],
+                    ending_3=data['option_3'],
+                    label=data['label']
+                )
             )
-    
+
     return examples
 
 
 def load_data(filename, tokenizer, max_seq_length, batch_size):
 
     examples = read_race_examples(filename)
-    features = convert_examples_to_features(examples, tokenizer, max_seq_length)
+    features = convert_examples_to_features(
+        examples, tokenizer, max_seq_length)
     dataloader = convert_features_to_tensors(features, batch_size)
     return dataloader, len(examples)
-
 
 
 if __name__ == "__main__":
